@@ -9,7 +9,7 @@ Three cards are said to be a valid *set* if for each of the four properties: all
 
 Doing the game, the players are presented with $12$ cards. If no set can be made, an additional card is placed until a set is found. One can ask the question: **What is the smallest number of cards for which there must exist a valid set?**. This has been answered already, but I will find a solution using [integer programming](https://en.wikipedia.org/wiki/Integer_programming).
 
-One can do this by creating a integer programming formulation of the decision problem **What is the largest number of cards possible, that does not contain a valid set**.
+One can do this by creating a integer programming formulation of the decision problem **What is the largest number of cards possible, that does not contain a valid set?**.
 
 Consider the set of all cards $V$, and use this to define the set of all valid triplets $U$. Given three cards $v^1, v^2$ and $v^3$ one can check if the triplet $(v^1,v^2,v^3)$ is valid using the following function *is_valid*:
 
@@ -27,7 +27,7 @@ def is_valid(card1,card2,card3):
 
 Doing this for all triplets gives us the set $U$ of all $1080$ valid triplets.
 
-$$x_v = \begin{cases}1, \quad \text{if node $v$ is selected}\\0,\quad \text{else}\end{cases}$$
+$$x_v = \begin{cases}1, \quad \text{if node $v$ is selected}\\ 0,\quad \text{else}\end{cases}$$
 
 One can formulate an integer program with the above decision variables, and constraints ensuring that no valid set exists among the selected cards:
 
