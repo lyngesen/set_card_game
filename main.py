@@ -5,11 +5,108 @@ import pyomo.environ as pyomo
 from pyomo.common.fileutils import Executable
 import networkx as nx
 import matplotlib.pyplot as plt
-
+import numpy as np
 
 PropertyValue = int  # each property has exactly 3 values
 CardTuple = tuple[PropertyValue, ...]
+N_PROPERTIES = 4  # number of properties, can be 2, 3 or 4
+N_PROPERTY_VALUES = 3  # number of values for each property, can be 3 or 4
 
+class Draw(object):
+    ALPHA = 1
+    X_LSPACE = np.linspace(-1, 1, 200)
+    SHAPES = {
+        0: {
+            "name": "rectangle",
+            "x": [-1, 1],
+            "y1": [-0.5, -0.5],
+            "y2": [0.5,  0.5],
+        },
+        1: {
+            "name": "oval",
+            "x": X_LSPACE,
+            "y1" : np.sqrt(1 - (X_LSPACE) ** 2) * 0.5,
+            "y2": -np.sqrt(1 - (X_LSPACE) ** 2) * 0.5
+        },
+        2: {
+            "name": "squickly",
+            "x": X_LSPACE,
+            "y1": np.sqrt(1 - (X_LSPACE) ** 2) * 0.5 * np.cos(0.2 * np.pi + X_LSPACE),
+            "y2": -np.sqrt(1 - (X_LSPACE) ** 2) * 0.5 * np.sin(0.2 * np.pi + X_LSPACE)
+        },
+        3: {
+            "name": "paralellogram",
+            "x": [-1,0, 1],
+            "y1": [-0.0,-0.5 ,-0.0],
+            "y2": [0,0.5,0],
+        },
+    }
+    FILLS = {
+        0: {'name': 'none', 'fill':'none'},
+        1: {'name': 'hatched', 'fill':'////'},
+        2: {'name': 'full', 'fill':'filled'},
+        3: {'name': 'hatched', 'fill':'++'}
+             }
+    COLORS = {
+        0: {'name': 'blue', 'color': '#2300FF'},
+        1: {'name': 'purple', 'color': '#FB0072'},
+        2: {'name': 'green', 'color': '#138D00'},
+        3: {'name': 'red', 'color': 'red'},
+    }
+    NUMBERS = {
+            0: {'name': 'one', 'number': 1},
+            1: {'name': 'two', 'number': 2},
+            2: {'name': 'three', 'number': 3},
+            3: {'name': 'four', 'number': 4},
+            }
+
+
+    @staticmethod
+    def draw_outline(ax, c, size=1, card_height = 3, card_width = 2, color ='black'):
+        x = [-card_width/2, card_width/2, card_width/2, -card_width/2, -card_width/2]
+        y = [-card_height/2, -card_height/2, card_height/2, card_height/2, -card_height/2]
+
+        # scale to size but same position
+        x = [xi * size for xi in x]
+        y = [yi * size for yi in y]
+
+        # translate to center c
+        x = [xi + c[0] for xi in x]
+        y = [yi + c[1] for yi in y]
+
+        # set aspect ratio to be equal
+        ax.plot(x, y, color=color, linewidth=size*0.1)
+
+    @staticmethod
+    def draw_shape(ax, shape, fill, color, pos=(0, 0), size=1):
+        x = [xi * size + pos[0] for xi in shape["x"]]
+        y1 = [yi * size + pos[1] for yi in shape["y1"]]
+        y2 = [yi * size + pos[1] for yi in shape["y2"]]
+
+        if fill['fill'] == 'filled':
+            ax.fill_between(x, y1, y2, color=color['color'], alpha=Draw.ALPHA, linewidth = size)
+        elif fill['fill'] == 'none':
+            ax.fill_between(x, y1, y2, color='none', edgecolor=color['color'], linewidth = size)
+        else:
+            ax.fill_between(x, y1, y2, color='none', hatch=fill['fill'], edgecolor=color['color'], linewidth = size)
+
+    @staticmethod
+    def draw_card(ax, shape, fill, color,number, card_pos=(0, 0), size=1):
+        """
+        Draw a card with the given shape, fill, color, position, and size.
+        The card is drawn centered at card_pos.
+        """
+        Draw.draw_outline(ax, card_pos, size)
+        POS_DIR = {
+            1: [(0, 0)],
+            2: [(0, -0.5), (0, 0.5)],
+            3: [(0, 0), (0, 1), (0, -1)],
+            4: [(0, 1), (0, -1), (0, - 1/3), (0, 1/3)],
+        }
+        for pos in POS_DIR[number['number']]:
+            pos = (pos[0] * size, pos[1] * size)  # scale position by size
+            pos_draw = (card_pos[0] + pos[0], card_pos[1] + pos[1])
+            Draw.draw_shape(ax, shape, fill, color, pos=pos_draw, size=0.8*size)
 
 class Card(object):
     def __init__(self, values: CardTuple):
@@ -29,6 +126,16 @@ class Card(object):
 
     def is_in_triplet(self, triplet: "Triplet") -> bool:
         return self in triplet.cards
+
+    def draw(self, ax, pos=(0, 0), size=1):
+        """
+        Draw the card on the given axes at position pos with size size.
+        """
+        shape = Draw.SHAPES[self[0]]
+        fill = Draw.FILLS[self[1]]
+        color = Draw.COLORS[self[2]]
+        number = Draw.NUMBERS[self[3]]
+        Draw.draw_card(ax, shape, fill, color, number, card_pos=pos, size=size)
 
 
 class Triplet(object):
@@ -62,6 +169,11 @@ class Triplet(object):
 
     def __repr__(self):
         return self.__str__()
+
+    def draw(self, ax, pos=(0, 0), size=1):
+        Draw.draw_outline(ax, pos, size=size, card_height=3*1.1, card_width=2.2*3, color = 'lightgray')
+        for i in range(-1,2):
+            self.cards[i].draw(ax, pos=(pos[0] + i * 2.2 * size, pos[1]), size=size)
 
 
 class Deck(object):
@@ -126,7 +238,7 @@ class AllTriplets(object):
 
 def plot_graph():
 
-    fig, ax = plt.subplots(figsize=(20, 20))
+    fig, ax = plt.subplots(figsize=(100, 800))
 
     V = Deck()
     U = AllTriplets(V)
@@ -138,7 +250,7 @@ def plot_graph():
     # bipartite position of nodes split into V and U
     pos = nx.bipartite_layout(G, nodes=V.cards, align="vertical")
     pos = {v: (0, v.id * (len(U.triplets) / len(V.cards))) for v in V.cards} | {
-        u: (1, u.id) for u in U.triplets
+        u: (100, u.id) for u in U.triplets
     }
     # pos = nx.spiral_layout(G)
     ax.set_title(
@@ -201,17 +313,30 @@ def plot_graph():
         G, pos, labels=labels_U, ax=ax, font_size=1, horizontalalignment="center"
     )
 
-    ax.set_xlabel(
-        f"A total of ${len(selected_cards)}$ cards have been chosen (marked red). Each possible valid triplet has an edge\n for each card it consists of, this is colored red if the card is selected in the solution. \n The number for each of the 1080 triplets indicate the number of cards in the tripliet selected. \n\nNote: see file figures/graph_{N_PROPERTIES}_{N_PROPERTY_VALUES}_{len(selected_nodes)}.pdf in order to zoom — to read the values",
-        fontsize=26,
-    )
+    # ax.set_xlabel(
+        # f"A total of ${len(selected_cards)}$ cards have been chosen (marked red). Each possible valid triplet has an edge\n for each card it consists of, this is colored red if the card is selected in the solution. \n The number for each of the 1080 triplets indicate the number of cards in the tripliet selected. \n\nNote: see file figures/graph_{N_PROPERTIES}_{N_PROPERTY_VALUES}_{len(selected_nodes)}.pdf in order to zoom — to read the values",
+        # fontsize=26,
+    # )
 
+
+    if N_PROPERTIES == 4 and N_PROPERTY_VALUES == 3:
+        if True: # draw cards
+            for card in V.cards:
+                pos_card = pos[card]
+                card.draw(ax, np.array(pos_card) + np.array((-10,0)), size=3)
+        if True:  # draw triplets
+            for triplet in U.triplets:
+                pos_triplet = pos[triplet]
+                triplet.draw(ax, np.array(pos_triplet) + np.array((1,0)), size=0.2)
+
+    ax.set_aspect("equal")
     # zoom
     fig.savefig(
         f"figures/graph_{N_PROPERTIES}_{N_PROPERTY_VALUES}_{len(selected_nodes)}.pdf"
     )
+    fig.set_size_inches(80, 40)
     fig.savefig(
-        f"figures/graph_{N_PROPERTIES}_{N_PROPERTY_VALUES}_{len(selected_nodes)}.png"
+        f"figures/graph_{N_PROPERTIES}_{N_PROPERTY_VALUES}_{len(selected_nodes)}.png", dpi = 300, bbox_inches='tight', pad_inches=0
     )
 
 
@@ -292,6 +417,9 @@ def add_table_readme():
     )
     for image in os.listdir("figures"):
         if image.endswith(".png"):
+            print(image)
+            if not re.match(r"graph_\d+_\d+_\d+", image):
+                continue
             n_props, n_vals, n_cards = re.findall(r"graph_(\d+)_(\d+)_(\d+)", image)[0]
             if n_cards == "1":
                 continue
@@ -309,6 +437,65 @@ def add_table_readme():
         f.writelines(content)
 
 
+def draw_solution():
+    V = Deck()
+
+    fig, ax = plt.subplots(figsize=(20, 20))
+    with open("solution.json", "r") as f:
+        solution = json.load(f)
+        selected_cards = solution["cards"]
+        selected_nodes = [card for card in V.cards if card.id in selected_cards]
+
+    for i, card in enumerate(selected_nodes):
+        posx = (i % 5)*1.2
+        posy = (i // 5)*1.8
+        card.draw(ax, (posx, posy), size=0.5)
+        ax.set_title("Solution Deck of Cards")
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_aspect('equal')
+
+    fig.savefig("figures/solution_deck_of_cards.pdf")
+    fig.savefig("figures/solution_deck_of_cards.png", dpi=300, bbox_inches='tight', pad_inches=0)
+
+def draw_triplets():
+    # draw all triplets
+    U = AllTriplets(Deck())
+    fig, ax = plt.subplots(figsize = (50,50))
+
+    for i, t in enumerate(U.triplets):
+        posx = (i % 32)*1.2*3
+        posy = (i // 32)*1.8*1
+        t.draw(ax, (posx, posy), size=0.5)
+        ax.set_title("All Triplets", fontsize=50)
+        # ax.set_xticks([])
+        # ax.set_yticks([])
+        ax.set_aspect('equal')
+        ax.axis('off')
+
+    fig.savefig("figures/all_triplets.pdf",bbox_inches='tight', transparent="True", pad_inches=0)
+    fig.savefig("figures/all_triplets.png", dpi=100, bbox_inches='tight', pad_inches=0)
+
+def draw_deck():
+    # draw deck
+    deck = Deck()
+    fig, ax = plt.subplots(figsize=(20, 20))
+
+    for i, card in enumerate(deck.cards):
+        posx = (i % 9)*1.2
+        posy = (i // 9)*1.8
+        card.draw(ax, (posx, posy), size=0.5)
+        ax.set_title("Deck of Cards")
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_aspect('equal')
+
+    fig.savefig("figures/deck_of_cards.pdf", bbox_inches='tight', pad_inches=0
+)
+    fig.savefig("figures/deck_of_cards.png", dpi=300, bbox_inches='tight', pad_inches=0
+)
+
+
 if __name__ == "__main__":
 
     for N_PROPERTIES, N_PROPERTY_VALUES in product((2, 3, 4), (3,)):
@@ -324,3 +511,13 @@ if __name__ == "__main__":
 
         # update the readme with the new table
         add_table_readme()
+
+        # draw if the cards ar the defaults
+        if N_PROPERTIES == 4 and N_PROPERTY_VALUES == 3:
+            # draw deck of cards
+            draw_deck() # saves figures/deck_of_cards.pdf
+            # draw all triplets
+            draw_triplets() # saves figures/all_triplets.pdf
+            # draw solution.json
+            draw_solution() # saves figures/solution_deck_of_cards.pdf
+

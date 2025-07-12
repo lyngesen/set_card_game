@@ -5,6 +5,9 @@
 
 Each card consists of a *color, shape, number,* and *filling*. Each of the four properties have exactly three possibilities, that is, there are three colors, three shapes etc. One can represent a card using a vector $v \in \{1,2,3\}^4 := V$. Eg. the card $v= \{1,3,1,2\}$ contains the 1st *color*, 3rd *shape*, 1st *number* (the number 1) and the 2nd *filling*. There are a total of $|V|= 3^4 = 81$ cards.
 
+<!--![All 81 cards](figures/deck_of_cards.png) -->
+<img src="figures/deck_of_cards.png" alt="Deck of cards" width="300"/>
+
 Three cards are said to be a valid *set* if for each of the four properties: all cards have the identical value of the property, or all cards have different values of the property. (See the rules [here](https://en.wikipedia.org/wiki/Set_(card_game)) for a better explanation).
 
 Doing the game, the players are presented with $12$ cards. If no set can be made, an additional card is placed until a set is found. One can ask the question: **What is the smallest number of cards for which there must exist a valid set?**. This has been answered already, but I will find a solution using [integer programming](https://en.wikipedia.org/wiki/Integer_programming).
@@ -27,7 +30,10 @@ def is_valid(card1,card2,card3):
 
 Doing this for all triplets gives us the set $U$ of all $1080$ valid triplets.
 
-$$x_v = \begin{cases}1, \quad \text{if node $v$ is selected}\\ 0,\quad \text{else}\end{cases}$$
+
+![All 81 cards](figures/all_triplets.png) 
+
+$$x_v = \begin{cases}1, \quad \text{if card $v$ is selected}\\ 0,\quad \text{else}\end{cases}$$
 
 One can formulate an integer program with the above decision variables, and constraints ensuring that no valid set exists among the selected cards:
 
@@ -41,9 +47,9 @@ $$
 
 In the optimal solution — solved using CPLEX — $20$ cards where chosen. This implies that for a set of $21$ cards there must exist at least one valid set. 
 
-![Plot of the Bipartite Graph](figures/graph_4_3_20.png)
+<img src="figures/solution_deck_of_cards.png" alt="Solution" width="300"/>
 
-
+For a bipartite graph showing the solution, where the left side is the set of cards and the right side is the set of valid triplets, see [this PDF](figures/graph_4_3_20.pdf).
 
 Note: [The solution of 20 was already found in 1971](https://en.wikipedia.org/wiki/Set_(card_game)#Basic_combinatorics_of_Set)
 
@@ -60,6 +66,15 @@ Note: [The solution of 20 was already found in 1971](https://en.wikipedia.org/wi
 # Alternative sets of cards
 
 The deck of cards are determined a set of $M^P$ properties containing $M^V$ values. In the game set one considers $M^P=4$ properties and $M^V=3$ values. One can answer the question **What is the largest number of cards possible, that does not contain a valid set** for different values of $M^P$ and $M^V$.
+
+
+
+
+
+
+
+
+
 
 
 
